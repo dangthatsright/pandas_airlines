@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt 
 
 class Network(object):
     def __init__(self, df):
@@ -10,6 +11,9 @@ class Network(object):
         self.ID_to_Airport = None
         self.ID_dict()
         self.Airport_to_ID = {v: k for k, v in self.ID_to_Airport.iteritems()}
+
+        self.degrees = {} #{airport iD:[in degree, out degree]}
+        self.all_degrees()
         
     # Currently, the matrix doesn't specify by airlines
     # also aggregates people over the year 
@@ -62,4 +66,35 @@ class Network(object):
                 neighbors.add(self.ID_set[j])
 
         return neighbors 
+
+    def all_degrees(self):
+        for airport in self.ID_set:
+            num_in = len(self.in_neighbors(airport))
+            num_out = len(self.out_neighbors(airport))
+            
+            self.degrees[airport] = [num_in, num_out]
+            
+    #observed degree distribution for some degree d 
+    def out_degree_dist(self, d):
+        n = len(self.ID_set)
+        num = 0
+        for key, val in self.degrees.iteritems():
+            if val[1] == d: num += 1
+        return (1.0*num)/n
+    
+    def in_degree_dist(self, d):
+        n = len(self.ID_set)
+        num = 0
+        for key, val in self.degrees.iteritems():
+            if val[0] == d: num += 1
+        return (1.0*num)/n
+    
+    def plot_degree_dist(self, start, end):
+        x = range(start,end)
+        y1 = [flightNetwork.out_degree_dist(i) for i in x]
+        y2 = [flightNetwork.in_degree_dist(i) for i in x]
+        
+        plt.plot(x,y1)
+        plt.plot(x,y2)
+        plt.show()
   
