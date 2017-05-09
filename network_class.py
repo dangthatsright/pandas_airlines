@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 
 class Network(object):
     def __init__(self, df):
@@ -11,9 +11,12 @@ class Network(object):
         self.ID_to_Airport = None
         self.ID_dict()
         self.Airport_to_ID = {v: k for k, v in self.ID_to_Airport.iteritems()}
-
+        
         self.degrees = {} #{airport iD:[in degree, out degree]}
         self.all_degrees()
+        
+        self.fit = None
+        #self.fit_regression(1, 101, direction="out") #can change params here
         
     # Currently, the matrix doesn't specify by airlines
     # also aggregates people over the year 
@@ -66,7 +69,7 @@ class Network(object):
                 neighbors.add(self.ID_set[j])
 
         return neighbors 
-
+    
     def all_degrees(self):
         for airport in self.ID_set:
             num_in = len(self.in_neighbors(airport))
@@ -91,10 +94,116 @@ class Network(object):
     
     def plot_degree_dist(self, start, end):
         x = range(start,end)
-        y1 = [flightNetwork.out_degree_dist(i) for i in x]
-        y2 = [flightNetwork.in_degree_dist(i) for i in x]
+        y1 = [self.out_degree_dist(i) for i in x]
+        y2 = [self.in_degree_dist(i) for i in x]
         
-        plt.plot(x,y1)
-        plt.plot(x,y2)
+        plt.plot(x,y1,label="out-degrees")
+        plt.plot(x,y2, label="in-degrees")
+        plt.legend(loc = "upper right")
+        plt.title("Observed Degree Distribution")
+        plt.xlabel("Degrees")
+        plt.ylabel("Probability")
         plt.show()
-  
+        
+    def test_directed(self):
+        (directed,undirected) = (0,0)
+        for i in xrange(len(self.adjMatrix)):
+            for j in xrange(len(self.adjMatrix)):
+                if (self.adjMatrix[i,j] != 0) and (self.adjMatrix[j,i] != 0):
+                    undirected += 1
+                elif (self.adjMatrix[i,j] != 0) and (self.adjMatrix[j,i] == 0):
+                    directed += 1
+                elif (self.adjMatrix[i,j] == 0) and (self.adjMatrix[j,i] != 0):
+                    directed += 1
+        
+        return (undirected/2.0,directed)
+    
+    def fit_regression(self, start ,end, direction="out"): #direction can be "in" or "out"
+        x = range(start,end)
+        
+        if direction=="out":
+            y = [self.out_degree_dist(i) for i in x]
+        else:
+            y = [self.in_degree_dist(i) for i in x]
+        
+        cleaned_y = [[x[i], y[i]] for i in xrange(len(x)) if y[i]!=0.0]
+        newx = [i[0] for i in cleaned_y]
+        newy = [i[1] for i in cleaned_y]
+
+        regr = linear_model.LinearRegression()
+        reshaped_x = np.log(newx)
+        reshaped_x = reshaped.reshape((len(newx),1))
+        regr.fit(reshaped_x, np.log(newy1))
+        
+        print 'Coefficients: ', regr.coef_, regr.intercept_
+        print "Mean squared error: %.2f" % np.mean((regr.predict(reshaped_x)-np.log(newy))**2)
+        
+        return regr
+    
+    def plot_power_fit(self, start, end, direction="out"):
+        
+        regr = self.fit_regression(start,end,direction=direction)
+        
+        x = range(start,end)
+        
+        y_out = [self.out_degree_dist(i) for i in x]
+        y_in = [self.in_degree_dist(i) for i in x]
+        
+        if direction=="out":
+            cleaned_y = [[x[i], y_out[i]] for i in xrange(len(x)) if y_out[i]!=0.0]
+        else:
+            cleaned_y = [[x[i], y_in[i]] for i in xrange(len(x)) if y_in[i]!=0.0]
+            
+        newx = [i[0] for i in cleaned_y]
+                
+        plt.plot(x,y_out,label="out-degrees")
+        plt.plot(x,y_in, label="in-degrees")
+        plt.plot(newx, [np.exp(regr.intercept_)*i**(regr.coef_[0]) for i in newx], label="fit")
+        plt.legend(loc = "upper right")
+        plt.xlabel("Degrees")
+        plt.ylabel("Probability")
+        plt.title("Power Fit using "+direction+"-degrees")
+        plt.show()
+    
+    
+    def plot_loglog(self, start, end, direction="out"):
+        regr = self.fit_regression(start,end,direction=direction)
+        
+        x = range(start,end)
+        
+        y_out = [self.out_degree_dist(i) for i in x]
+        y_in = [self.in_degree_dist(i) for i in x]
+        
+        if direction=="out":
+            cleaned_y = [[x[i], y_out[i]] for i in xrange(len(x)) if y_out[i]!=0.0]
+        else:
+            cleaned_y = [[x[i], y_in[i]] for i in xrange(len(x)) if y_in[i]!=0.0]
+            
+        newx = [i[0] for i in cleaned_y]
+        reshaped_x = np.log(newx)
+        reshaped_x = reshaped.reshape((len(newx),1))
+
+        #plt.plot(newx,newy1)
+        # plt.plot(np.log(newx), np.log(newy1))
+        # plt.plot(np.log(newx), regr.predict(reshaped))
+        
+        plt.plot(np.log(x),np.log(y_out),label="log out-degrees")
+        plt.plot(np.log(x),np.log(y_in), label="log in-degrees")
+        plt.plot(np.log(newx), regr.predict(reshaped_x), label="fit")
+        plt.legend(loc = "upper right")
+        plt.title("Log-Log Graph of Degree Distribution")
+        plt.xlabel("Log Degrees")
+        plt.ylabel("Log Probability")
+        plt.show()
+
+
+if __name__ == "__main__":
+    cleaned_df = pd.read_csv("cleaned_flights.csv")
+    flightNetwork = Network(cleaned_df)
+
+    start = 1
+    end = 101
+    direction = "out"
+    flightNetwork.plot_power_fit(start,end,direction=direction)
+    
+    
