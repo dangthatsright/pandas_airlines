@@ -1,11 +1,15 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import time
+from sklearn import linear_model
 
 class Network(object):
     def __init__(self, df):
         self.df = df
         self.ID_set = list(set(self.df['ORIGIN_AIRPORT_ID']) | set(self.df['DEST_AIRPORT_ID']))
+        print len(set(self.df['ORIGIN_AIRPORT_ID']))
+        print len(set(self.df['DEST_AIRPORT_ID']))
         self.adjMatrix = None
         self.initAdjMatrix()
         self.ID_to_Airport = None
@@ -26,8 +30,11 @@ class Network(object):
         self.adjMatrix = np.zeros((numAirports, numAirports))
         
         for origin in self.ID_set:
-            for dest in set(self.df[self.df['ORIGIN_AIRPORT_ID']==origin]['DEST_AIRPORT_ID']):
-                flights = self.df[(self.df['ORIGIN_AIRPORT_ID']==origin) & (self.df['DEST_AIRPORT_ID']==dest)]
+            origin_flights = self.df[self.df['ORIGIN_AIRPORT_ID']==origin]
+            for dest in set(origin_flights['DEST_AIRPORT_ID']):
+                count+=1
+                #flights = self.df[(self.df['ORIGIN_AIRPORT_ID']==origin) & (self.df['DEST_AIRPORT_ID']==dest)]
+                flights = origin_flights[origin_flights['DEST_AIRPORT_ID']==dest]
                 total_passengers = sum(flights['PASSENGERS'])
                 originIDX = self.ID_set.index(origin)
                 destIDX = self.ID_set.index(dest)
@@ -132,8 +139,8 @@ class Network(object):
 
         regr = linear_model.LinearRegression()
         reshaped_x = np.log(newx)
-        reshaped_x = reshaped.reshape((len(newx),1))
-        regr.fit(reshaped_x, np.log(newy1))
+        reshaped_x = reshaped_x.reshape((len(newx),1))
+        regr.fit(reshaped_x, np.log(newy))
         
         print 'Coefficients: ', regr.coef_, regr.intercept_
         print "Mean squared error: %.2f" % np.mean((regr.predict(reshaped_x)-np.log(newy))**2)
@@ -181,7 +188,7 @@ class Network(object):
             
         newx = [i[0] for i in cleaned_y]
         reshaped_x = np.log(newx)
-        reshaped_x = reshaped.reshape((len(newx),1))
+        reshaped_x = reshaped_x.reshape((len(newx),1))
 
         #plt.plot(newx,newy1)
         # plt.plot(np.log(newx), np.log(newy1))
@@ -198,12 +205,17 @@ class Network(object):
 
 
 if __name__ == "__main__":
+    t0 = time.time()
     cleaned_df = pd.read_csv("cleaned_flights.csv")
     flightNetwork = Network(cleaned_df)
 
     start = 1
     end = 101
     direction = "out"
-    flightNetwork.plot_power_fit(start,end,direction=direction)
+    flightNetwork.plot_power_fit(start,end,direction=direction)    
+    
+    t1 = time.time()
+    total = t1-t0
+    print 'time',total
     
     
