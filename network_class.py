@@ -233,4 +233,36 @@ if __name__ == "__main__":
     k = 10
     print flightNetwork.topAirportsFromIDs(top_airports[:k]) #show the top k airports
     
-    #TODO katz, pagerank, HITS
+    #Katz
+    [v,d]=np.linalg.eig(flightNetwork.adjMatrix)
+    alpha = 0.5/max(abs(v))
+    katz = np.linalg.inv(np.eye(len(adj))-adj*alpha).sum(axis = 1)
+    print flightNetwork.topAirportsFromIDs(np.argsort(katz)[::-1][:10])
+    
+    #pagerank
+    adj = np.copy(flightNetwork.adjMatrix)
+    outdeg = adj.sum(axis = 1)
+    outdeg[outdeg == 0] = 0.1
+    D = np.diag(outdeg)
+    ADinv=np.dot(adj,np.linalg.inv(D))
+    [v,d]=np.linalg.eig(ADinv)
+    alpha = 0.85/max(abs(v))
+    pagerank = np.linalg.inv(np.eye(len(adj))-alpha*ADinv).sum(axis=1)
+    pagerank2 = np.dot(D, np.linalg.inv(D-alpha*adj)).sum(axis = 1)
+    print flightNetwork.topAirportsFromIDs(np.argsort(pagerank)[::-1][:10])
+    
+    #HITS
+    AAT = np.dot(adj,np.transpose(adj))
+    [v,d]=np.linalg.eig(AAT)
+    top_eig = np.argsort(abs(v))[::-1]
+    
+    #authorities
+    top_authority = np.argsort(d[:,top_eig[0]])[::-1]
+    print flightNetwork.topAirportsFromIDs(top_authority[:10])
+    
+    #hubs
+    top_hub = np.argsort(np.dot(np.transpose(adj),d[:,top_eig[0]]))[::-1]
+    print flightNetwork.topAirportsFromIDs(top_hub[:10])
+    
+    
+    #TODO betweeness centrality
