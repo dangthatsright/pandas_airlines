@@ -7,9 +7,7 @@ from sklearn import linear_model
 class Network(object):
     def __init__(self, df):
         self.df = df
-        self.ID_set = list(set(self.df['ORIGIN_AIRPORT_ID']) | set(self.df['DEST_AIRPORT_ID']))
-        print len(set(self.df['ORIGIN_AIRPORT_ID']))
-        print len(set(self.df['DEST_AIRPORT_ID']))
+        self.ID_set = list(set(self.df['ORIGIN_AIRPORT_ID']) | set(self.df['DEST_AIRPORT_ID']))]
         self.adjMatrix = None
         self.initAdjMatrix()
         self.ID_to_Airport = None
