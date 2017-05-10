@@ -199,21 +199,38 @@ class Network(object):
         plt.xlabel("Log Degrees")
         plt.ylabel("Log Probability")
         plt.show()
+        
+    def topAirportsFromIDs(self, idx_list):
+        return [self.ID_to_Airport[self.ID_set[idx]] for idx in idx_list]
 
 
 if __name__ == "__main__":
-    t0 = time.time()
     cleaned_df = pd.read_csv("cleaned_flights.csv")
     flightNetwork = Network(cleaned_df)
 
+    #plotting degree distribution
     start = 1
     end = 101
     direction = "out"
-    #flightNetwork.plot_power_fit(start,end,direction=direction)    
+    flightNetwork.plot_power_fit(start,end,direction=direction)    
+    
+    #top in/out degree centralities 
+    top_in = np.sum(flightNetwork.adjMatrix, axis=0)
+    top_out = np.sum(flightNetwork.adjMatrix, axis=1)
+    top_in_idx = np.argsort(top_in)[::-1]
+    top_out_idx = np.argsort(top_out)[::-1]
+    print flightNetwork.topAirportsFromIDs(top_in_idx[:10])
+    print flightNetwork.topAirportsFromIDs(top_out_idx[:10])
 
+    #eigenvalue centralities, does not work well
+    adj = np.copy(flightNetwork.adjMatrix)
+    adj[adj==0]=10e-10      #set 0s equal to a small value, may cause problems for airports with 0 outgoing flights
+    norm = adj.sum(axis=0)
+    adj = adj / norm    #make it be row stochastic
+    [v,d]=np.linalg.eig(adj)
+    top_eig = np.argsort(v)[::-1]
+    top_airports = np.argsort(d[:,top_eig[0]])[::-1]
+    k = 10
+    print flightNetwork.topAirportsFromIDs(top_airports[:k]) #show the top k airports
     
-    t1 = time.time()
-    total = t1-t0
-    print 'time',total
-    
-    
+    #TODO katz, pagerank, HITS
