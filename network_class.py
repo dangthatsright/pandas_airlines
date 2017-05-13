@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 from sklearn import linear_model
+import heapq
 
 class Network(object):
     def __init__(self, df):
@@ -225,7 +226,7 @@ if __name__ == "__main__":
     #eigenvalue centralities, does not work well
     adj = np.copy(flightNetwork.adjMatrix)
     adj[adj==0]=10e-10      #set 0s equal to a small value, may cause problems for airports with 0 outgoing flights
-    norm = adj.sum(axis=0)
+    norm = adj.sum(axis=1)
     adj = adj / norm    #make it be row stochastic
     [v,d]=np.linalg.eig(adj)
     top_eig = np.argsort(v)[::-1]
@@ -264,5 +265,33 @@ if __name__ == "__main__":
     top_hub = np.argsort(np.dot(np.transpose(adj),d[:,top_eig[0]]))[::-1]
     print flightNetwork.topAirportsFromIDs(top_hub[:10])
     
+    #importance additional flight
+    num_ports = len(adj)
+    outdeg = adj.sum(axis = 1)
+    outdeg[outdeg == 0] = 1
+    connecting = np.zeros([num_ports, num_ports])
+    for i in range(num_ports):
+        for j in range(num_ports):
+            #no flights between i and j
+            total = 0
+            if adj[i,j] == 0:
+                #calculate how many people are expected to be traveling there
+                scaled_out = adj[:,j]/outdeg
+                total = np.dot(adj[i,:], scaled_out)
+            connecting[i,j] = total
     
-    #TODO betweeness centrality
+    top_connectors = []
+    for i in range(num_ports):
+        for j in range(num_ports):
+            if i == j:
+                connecting[i,j] = 0
+    for i in range(num_ports):
+        for j in range(num_ports):
+            heapq.heappush(top_connectors, (connecting[i,j], i, j))
+            if(len(top_connectors) > 40):
+                heapq.heappop(top_connectors)
+
+    top_connectors.sort()
+    for connector in top_connectors[::-1]:
+        (value, i, j) = connector
+        print (flightNetwork.topAirportsFromIDs([i]),flightNetwork.topAirportsFromIDs([j]))
